@@ -206,7 +206,7 @@ $offset_in_file = ( $record_value - $node_count )
 
 ### IPv4 addresses in an IPv6 tree
 
-When storing IPv4 addresses in an IPv6 tree, they are stored as-is, so they occupy the first 32-bits of the address space (from 0 to 2**32 - 1).
+当把IPv4地址存储到IPv6树中时, IPv4地址按照原样存储, 所以需要占用开始的 32个比特 of the address space (from 0 to 2**32 - 1).
 
 Creators of databases should decide on a strategy for handling the various mappings between IPv4 and IPv6.
 
