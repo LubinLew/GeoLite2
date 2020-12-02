@@ -17,7 +17,7 @@
   * [节点布局](#节点布局)
   * [搜索算法](#搜索算法)
 * [数据段](#数据段)
-* [Authors && License](#Authors && License)
+* [Authors && License](#Authors&&License)
 
 ## 简介
 
@@ -419,7 +419,7 @@ This means that we are limited to 4GB of address space for pointers, so the data
 - [PHP](https://github.com/maxmind/MaxMind-DB-Reader-php)
 - [Python](https://github.com/maxmind/MaxMind-DB-Reader-python)
 
-## Authors && License
+## Authors&&License
 
 This specification was created by the following authors:
 
