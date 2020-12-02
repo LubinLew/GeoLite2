@@ -3,6 +3,8 @@
 > 翻译 [MaxMind DB File Format Specification](http://maxmind.github.io/MaxMind-DB/)
 > 
 > 参考 [MaxMind DB 文件格式规范](https://www.cnblogs.com/yufengs/p/6606609.html)
+> 
+> 日期 2020-12-02
 
 ## 目录
 
@@ -15,7 +17,7 @@
   * [节点布局](#节点布局)
   * [搜索算法](#搜索算法)
 * [数据段](#数据段)
-* [Typical Uses](#typical-uses)
+* [Authors && License](#Authors && License)
 
 ## 简介
 
@@ -32,6 +34,8 @@ MaxMind DB 文件格式是一种使用`二叉搜索树`(binary search tree)方�
 - 二进制搜索树(binary search tree). 每个级别的树都对应一个比特位，这个比特位是一个表示IPv6地址的128位数据中的一位。
 - 数据段(data section)。这里保存的是指定IP对应的详细信息。
 - 元数据(Database metadata)。数据文件的自身描述信息。
+
+--------
 
 ## 元数据段
 
@@ -121,6 +125,8 @@ $search_tree_size_in_bytes = ( ( $record_size * 2 ) / 8 ) * $number_of_nodes
 ```
 
 The end of the search tree marks the beginning of the data section.
+
+---------------
 
 ## 二进制搜索树段
 
@@ -212,7 +218,7 @@ Database creators are encouraged to document whether they are doing something si
 
 The Teredo subnet cannot be accounted for in the tree. Instead, code that searches the tree can offer to decode the IPv4 portion of a Teredo address and look that up.
 
-
+---------------
 
 ## 数据段
 
@@ -413,14 +419,12 @@ This means that we are limited to 4GB of address space for pointers, so the data
 - [PHP](https://github.com/maxmind/MaxMind-DB-Reader-php)
 - [Python](https://github.com/maxmind/MaxMind-DB-Reader-python)
 
-## Authors
+## Authors && License
 
 This specification was created by the following authors:
 
 - Greg Oschwald <goschwald@maxmind.com>
 - Dave Rolsky <drolsky@maxmind.com>
 - Boris Zentner <bzentner@maxmind.com>
-
-## License
 
 This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/ or send a letter to Creative Commons, 444 Castro Street, Suite 900, Mountain View, California, 94041, USA
