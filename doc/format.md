@@ -4,15 +4,28 @@
 > 
 > 参考 [MaxMind DB 文件格式规范](https://www.cnblogs.com/yufengs/p/6606609.html)
 
+## 目录
+
+* [简介](#简介)
+  * [版本](#版本)
+  * [概述](#概述)
+* [元数据段](#元数据段)
+  * [结构组成](#结构组成)
+* [二进制搜索树段](#二进制搜索树段)
+  * [节点布局](#节点布局)
+  * [搜索算法](#搜索算法)
+* [数据段](#数据段)
+* [Typical Uses](#typical-uses)
+
 ## 简介
 
 MaxMind DB 文件格式是一种使用`二叉搜索树`(binary search tree)方式将IPv4 和 IPv6地址映射到`数据记录`(data records)的数据格式。数据可以到 www.maxmind.com 下载，不过需要注册登录才能下载。
 
-## 版本
+### 版本
 
 这个文档描述的是 **version 2.0** 版本的数据格式。版本号由主版本(major)号和次版本(minor)号组成，版本号不应该用十进制方式解读，例如 2.10 版本大于 2.9 版本。数据格式保持主版本兼容，次版本不会改变数据格式。
 
-## 概述
+### 概述
 
 数据文件可以分为3个部分:
 
@@ -20,9 +33,13 @@ MaxMind DB 文件格式是一种使用`二叉搜索树`(binary search tree)方�
 - 数据段(data section)。这里保存的是指定IP对应的详细信息。
 - 元数据(Database metadata)。数据文件的自身描述信息。
 
-## 元数据
+## 元数据段
 
-元数据存储在文件的最末端，可以通过寻找二进制序列 `\xab\xcd\xefMaxMind.com`来定位元数据的开始位置。 文件中最后一次出现这个二进制序列，标志了数据段结束，元数据的开始。 因为数据段是允许用户自定义的，所以为了保险起见，需要找最后一次出现的位置。元数据部分最大不能超过128KiB(包含前面的二进制序列标记)  元数据存储在Map数据结构中。这种结构后面会详细介绍。元数据有许多关键数据，这些关键数据改变数据类型或者删除都会导致主版本升级。下面是这些关键数据的介绍：
+元数据存储在文件的最末端，可以通过寻找二进制序列 `\xab\xcd\xefMaxMind.com`来定位元数据的开始位置。 文件中最后一次出现这个二进制序列，标志了数据段结束，元数据的开始。 因为数据段是允许用户自定义的，所以为了保险起见，需要找最后一次出现的位置。元数据部分最大不能超过128KiB(包含前面的二进制序列标记)  元数据存储在Map数据结构中。这种结构后面会详细介绍。
+
+### 结构组成
+
+元数据有许多关键数据，这些关键数据改变数据类型或者删除都会导致主版本升级。下面是这些关键数据的介绍：
 
 ```c
 typedef struct MMDB_metadata_s {
@@ -47,19 +64,17 @@ typedef struct MMDB_metadata_s {
     } description;
 
 } MMDB_metadata_s;
-
-
 ```
 
-### node_count
+#### node_count
 
 无符号的32位整型，表示搜索树的节点个数。
 
-### record_size
+#### record_size
 
 无符号的16位整型， 表示搜索树中一个记录中的比特位数，每个节点都有2个记录(record).
 
-### ip_version
+#### ip_version
 
 无符号的16位整型，取值范围为4和6；4表示仅有IPv4地址， 6表示包含IPv4和IPv6地址。
 
@@ -73,27 +88,27 @@ if (mmdb->metadata.ip_version == 4) {
 }
 ```
 
-### database_type
+#### database_type
 
 一个字符串，表示每一个IP地址对应的数据记录的结构。这些结构的实际定义由数据库创建者决定。以 “GeoIP” 开头的字符串保留给 MaxMind 公司，并且 “GeoIP” 是注册商标。
 
-### languages
+#### languages
 
 字符串数组，每一个字符串表示一种语言(例如`zh-CN`表示简体中文)。一个记录中某个项目(例如名字)可能包含多种语言，注意不是`languages`声明的所有语言种类都会有， 并且不允许包含未声明的语言种类。这是一个可选的键，因为这并不适用于所有的数据类型。
 
-### binary_format_major_version
+#### binary_format_major_version
 
 无符号的16位整型， 表示该文件格式的主版本号。
 
-### binary_format_minor_version
+#### binary_format_minor_version
 
 无符号的16位整型， 表示该文件格式的次版本号。
 
-### build_epoch
+#### build_epoch
 
 无符号的64位整型， 表示该文件生成的UNIX纪元(epoch)时间戳(从[协调世界时](https://baike.baidu.com/item/%E5%8D%8F%E8%B0%83%E4%B8%96%E7%95%8C%E6%97%B6)1970年1月1日0时0分0秒起至现在的总秒数，不考虑闰秒)。
 
-### description
+#### description
 
 指向一个map(key-value对结构)。map中所有的key都是一种语言代码，value是UTF-8格式的描述字符串。这是一个可选的键，但是建议创建者最少描述一种语言。
 
@@ -101,8 +116,8 @@ if (mmdb->metadata.ip_version == 4) {
 
 The formula for calculating the search tree section size *in bytes* is as follows:
 
-```
-( ( $record_size * 2 ) / 8 ) * $number_of_nodes
+```bash
+$search_tree_size_in_bytes = ( ( $record_size * 2 ) / 8 ) * $number_of_nodes
 ```
 
 The end of the search tree marks the beginning of the data section.
@@ -158,31 +173,27 @@ Note 4 bits of each pointer are combined into the middle byte. For both records,
 
 In order to determine where in the data section we should start looking, we use the following formula:
 
-```
+```bash
 $data_section_offset = ( $record_value - $node_count ) - 16
 ```
 
-The 16 is the size of the data section separator. We subtract it because we want to permit pointing to the first byte of the data section. Recall that the record value cannot equal the node count as that means there is no data. Instead, we choose to start values that go to the data section at `$node_count + 16`. (This has the side effect that record values `$node_count + 1` through `$node_count + 15` inclusive are not valid).
+16是数据段分隔符(连续16个NULL)的大小，减去它是想要指向数据段的第一个字节。上面说过，记录值等于节点总数表示未搜索到，所以选择数据段从 `$node_count + 16` 开始。 (这导致的副作用是记录值从 `$node_count + 1` 到 `$node_count + 15` 是无效的).
 
-This is best demonstrated by an example:
+为了更好理解上面所说的内容，举一个例子：
 
-Let’s assume we have a 24-bit tree with 1,000 nodes. Each node contains 48 bits, or 6 bytes. The size of the tree is 6,000 bytes.
+假设有一个1000个节点24-bit 的树。每个节点包含48比特(6字节)，整个树的大小为 6,000 字节。当一个记录中的值小于1000，那么这个值是节点序号，继续从这个节点搜索。如果记录的值大于等于1016，我们知道这是数据段的值。首先减去1000(节点个数)，然后减去数据段分隔符的16字节，我们就得到了数据段开始的值。如果记录的值是6000，那么根据公式，我们知道偏移量是4984(6000 - 1000 - 16)。
 
-When a record in the tree contains a number that is less than 1,000, this is a *node number*, and we look up that node. If a record contains a value greater than or equal to 1,016, we know that it is a data section value. We subtract the node count (1,000) and then subtract 16 for the data section separator, giving us the number 0, the first byte of the data section.
+为了知道数据段的开始(相对文件的偏移量)，我们可以是二进制搜索树的大小加上 16 就可以得出:
 
-If a record contained the value 6,000, this formula would give us an offset of 4,984 into the data section.
-
-In order to determine where in the file this offset really points to, we also need to know where the data section starts. This can be calculated by determining the size of the search tree in bytes and then adding an additional 16 bytes for the data section separator:
-
-```
+```bash
 $offset_in_file = $data_section_offset
                   + $search_tree_size_in_bytes
                   + 16
 ```
 
-Since we subtract and then add 16, the final formula to determine the offset in the file can be simplified to:
+因为加一次16减去一次16，所有最终简化为下面的公式：
 
-```
+```bash
 $offset_in_file = ( $record_value - $node_count )
                   + $search_tree_size_in_bytes
 ```
@@ -201,13 +212,9 @@ Database creators are encouraged to document whether they are doing something si
 
 The Teredo subnet cannot be accounted for in the tree. Instead, code that searches the tree can offer to decode the IPv4 portion of a Teredo address and look that up.
 
-## Data Section Separator
 
-There are 16 bytes of NULLs in between the search tree and the data section. This separator exists in order to make it possible for a verification tool to distinguish between the two sections.
 
-This separator is not considered part of the data section itself. In other words, the data section starts at `$size_of_search_tree + 16` bytes in the file.
-
-## Output Data Section
+## 数据段
 
 Each output data field has an associated type, and that type is encoded as a number that begins the data field. Some types are variable length. In those cases, the type indicator is also followed by a length. The data payload always comes at the end of the field.
 
