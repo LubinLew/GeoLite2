@@ -228,15 +228,53 @@ All binary data is stored in big-endian format.
 
 Note that the *interpretation* of a given data type’s meaning is decided by higher-level APIs, not by the binary format itself.
 
+
+
+```c
+#define MMDB_DATA_TYPE_EXTENDED    (0)
+#define MMDB_DATA_TYPE_POINTER     (1)
+#define MMDB_DATA_TYPE_UTF8_STRING (2)
+#define MMDB_DATA_TYPE_DOUBLE      (3)
+#define MMDB_DATA_TYPE_BYTES       (4)
+#define MMDB_DATA_TYPE_UINT16      (5)
+#define MMDB_DATA_TYPE_UINT32      (6)
+#define MMDB_DATA_TYPE_MAP         (7)
+
+#define MMDB_DATA_TYPE_INT32       (8)
+#define MMDB_DATA_TYPE_UINT64      (9)
+#define MMDB_DATA_TYPE_UINT128    (10)
+#define MMDB_DATA_TYPE_ARRAY      (11)
+#define MMDB_DATA_TYPE_CONTAINER  (12)
+#define MMDB_DATA_TYPE_END_MARKER (13)
+#define MMDB_DATA_TYPE_BOOLEAN    (14)
+#define MMDB_DATA_TYPE_FLOAT      (15)
+```
+
+每一个的 field 都是从一个控制字节开始。控制字节包含了数据类型和数据长度信息。前三个比特位表示数据类型，如果三位都是0表示这是个扩展类型，意味着下一个字节开始包含 actual type。否则前三位取值为1~7。
+
 ### pointer - 1
 
-A pointer to another part of the data section’s address space. The pointer will point to the beginning of a field. It is illegal for a pointer to point to another pointer.
+A pointer to another part of the data section’s address space. The pointer will point to the beginning of a field. 不能够将一个指针指向另一个指针。指针值是从数据段开始计算，而不是从文件开始。
 
-Pointer values start from the beginning of the data section, *not* the beginning of the file.
+Pointers use the last five bits in the control byte to calculate the pointer value.
+
+To calculate the pointer value, we start by subdividing the five bits into two groups. The first two bits indicate the size, and the next three bits are part of the value, so we end up with a control byte breaking down like this: 001SSVVV.
+
+The size can be 0, 1, 2, or 3.
+
+If the size is 0, the pointer is built by appending the next byte to the last three bits to produce an 11-bit value.
+
+If the size is 1, the pointer is built by appending the next two bytes to the last three bits to produce a 19-bit value + 2048.
+
+If the size is 2, the pointer is built by appending the next three bytes to the last three bits to produce a 27-bit value + 526336.
+
+Finally, if the size is 3, the pointer’s value is contained in the next four bytes as a 32-bit value. In this case, the last three bits of the control byte are ignored.
+
+This means that we are limited to 4GB of address space for pointers, so the data section size for the database is limited to 4GB.
 
 ### UTF-8 string - 2
 
-A variable length byte sequence that contains valid utf8. If the length is zero then this is an empty string.
+一个不确定长度的字节序列其中含有争取到的UTF8内容，如果产地为0，表示是一个空字符串。
 
 ### double - 3
 
@@ -244,9 +282,9 @@ This is stored as an IEEE-754 double (binary64) in big-endian format. The length
 
 ### bytes - 4
 
-A variable length byte sequence containing any sort of binary data. If the length is zero then this a zero-length byte sequence.
+一个不确定长度的字节序列可以包含任何二进制数据。如果长度为0，说明是一个空的字节序列。这个类型当前还未使用，以后可能会用于嵌入非文本数据，例如图像等。
 
-This is not currently used but may be used in the future to embed non-text data (images, etc.).
+
 
 ### integer formats
 
@@ -310,9 +348,7 @@ This type is provided primarily for completeness. Because of the way floating po
 
 ### Data Field Format
 
-Each field starts with a control byte. This control byte provides information about the field’s data type and payload size.
-
-The first three bits of the control byte tell you what type the field is. If these bits are all 0, then this is an “extended” type, which means that the *next* byte contains the actual type. Otherwise, the first three bits will contain a number from 1 to 7, the actual type for the field.
+每一个的 field 都是从一个控制字节开始。控制字节包含了数据类型和数据长度信息。前三个比特位表示数据类型，如果三位都是0表示这是个扩展类型，意味着下一个字节开始包含 actual type。否则前三位取值为1~7。~Otherwise, the first three bits will contain a number from 1 to 7, the actual type for the field.
 
 We’ve tried to assign the most commonly used types as numbers 1-7 as an optimization.
 
@@ -320,7 +356,7 @@ With an extended type, the type number in the second byte is the number minus 7.
 
 Here is an example of how the control byte may combine with the next byte to tell us the type:
 
-```
+```pure
 001XXXXX          pointer
 010XXXXX          UTF-8 string
 110XXXXX          unsigned 32-bit int (ASCII)
@@ -376,33 +412,11 @@ The binary number types always have a known size, but for consistency’s sake, 
 
 #### Maps
 
-Maps use the size in the control byte (and any following bytes) to indicate the number of key/value pairs in the map, not the size of the payload in bytes.
+map 类型控制字节中的数据长度表示的是键值对(key/value pairs)的个数。
 
 This means that the maximum number of pairs for a single map is 16,843,036.
 
-Maps are laid out with each key followed by its value, followed by the next pair, etc.
-
-The keys are **always** UTF-8 strings. The values may be any data type, including maps or pointers.
-
-Once we know the number of pairs, we can look at each pair in turn to determine the size of the key and the key name, as well as the value’s type and payload.
-
-#### Pointers
-
-Pointers use the last five bits in the control byte to calculate the pointer value.
-
-To calculate the pointer value, we start by subdividing the five bits into two groups. The first two bits indicate the size, and the next three bits are part of the value, so we end up with a control byte breaking down like this: 001SSVVV.
-
-The size can be 0, 1, 2, or 3.
-
-If the size is 0, the pointer is built by appending the next byte to the last three bits to produce an 11-bit value.
-
-If the size is 1, the pointer is built by appending the next two bytes to the last three bits to produce a 19-bit value + 2048.
-
-If the size is 2, the pointer is built by appending the next three bytes to the last three bits to produce a 27-bit value + 526336.
-
-Finally, if the size is 3, the pointer’s value is contained in the next four bytes as a 32-bit value. In this case, the last three bits of the control byte are ignored.
-
-This means that we are limited to 4GB of address space for pointers, so the data section size for the database is limited to 4GB.
+map类型的键值对布局是 每一个键后面紧跟着其值，后面就是亮一个键值对。键永远都是 UTF-8 字符串，值可以是任意类型，甚至是map 和 指针。一旦我们知道了键值对的数量，我们就可以一对一对的按照顺序解析出来。
 
 -----------
 
