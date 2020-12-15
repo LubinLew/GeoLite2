@@ -222,13 +222,13 @@ The Teredo subnet cannot be accounted for in the tree. Instead, code that search
 
 ## 数据段
 
-Each output data field has an associated type, and that type is encoded as a number that begins the data field. Some types are variable length. In those cases, the type indicator is also followed by a length. The data payload always comes at the end of the field.
+每一个数据域都有一个类型， 并且类型在数据域开头使用数字表示。一些类型长度不固定，这些类型会标示长度，长度变量紧跟在数据类型变量之后。数据负载在数据域之后,所有的二进制数据都以大端的方式存储。
 
-All binary data is stored in big-endian format.
+```bash
+| 数据类型 | 数据长度 | 数据负载 |
+```
 
 Note that the *interpretation* of a given data type’s meaning is decided by higher-level APIs, not by the binary format itself.
-
-
 
 ```c
 #define MMDB_DATA_TYPE_EXTENDED    (0)
@@ -239,7 +239,7 @@ Note that the *interpretation* of a given data type’s meaning is decided by 
 #define MMDB_DATA_TYPE_UINT16      (5)
 #define MMDB_DATA_TYPE_UINT32      (6)
 #define MMDB_DATA_TYPE_MAP         (7)
-
+/* 下面是扩展类型 */
 #define MMDB_DATA_TYPE_INT32       (8)
 #define MMDB_DATA_TYPE_UINT64      (9)
 #define MMDB_DATA_TYPE_UINT128    (10)
@@ -250,17 +250,51 @@ Note that the *interpretation* of a given data type’s meaning is decided by 
 #define MMDB_DATA_TYPE_FLOAT      (15)
 ```
 
-每一个的 field 都是从一个控制字节开始。控制字节包含了数据类型和数据长度信息。前三个比特位表示数据类型，如果三位都是0表示这是个扩展类型，意味着下一个字节开始包含 actual type。否则前三位取值为1~7。
+每一个的 field 都是从一个控制字节开始。控制字节包含了数据类型和数据长度信息。
 
-### pointer - 1
+```c
+/* 获取控制字节(数据段+偏移地址) */
+uint8_t ctrl = mem[offset++]; //此时 offset 指向控制字节的下一个字节
+```
 
-A pointer to another part of the data section’s address space. The pointer will point to the beginning of a field. 不能够将一个指针指向另一个指针。指针值是从数据段开始计算，而不是从文件开始。
+控制字节前三个比特位表示数据类型，计算方法如下:
 
-Pointers use the last five bits in the control byte to calculate the pointer value.
+```c
+int type = (ctrl >> 5) & 7; /* 7 = 0111 */
+```
 
-To calculate the pointer value, we start by subdividing the five bits into two groups. The first two bits indicate the size, and the next three bits are part of the value, so we end up with a control byte breaking down like this: 001SSVVV.
+前三位取值为0~7。如果是0表示这是个扩展类型，意味着下一个字节开始包含真实类型。
 
-The size can be 0, 1, 2, or 3.
+```c
+/* 获取 扩展类型 */
+int get_ext_type(int raw_ext_type) {
+    return 7 + raw_ext_type;
+}
+
+/* 扩展类型的情况下,控制字节的下一个字节用来计算数据类型 */
+if (type == MMDB_DATA_TYPE_EXTENDED) {
+    type = get_ext_type(mem[offset++]);
+}
+```
+
+解析过程在函数 `decode_one()` 中实现。
+
+```c
+int decode_one(const MMDB_s *const mmdb, uint32_t offset, MMDB_entry_data_s *entry_data)
+```
+
+### 指针类型(pointer)
+
+指针,指向数据段的地址空间。这个指针会指向一个数据域的开始。不能够将一个指针指向另一个指针。指针值是从数据段开始计算，而不是从文件开始。
+
+指针的值使用控制字节的后五个比特位计算。需要将这五个比特位分成两部分。前两个比特位表示大小(size)，后三个比特位是值(value)的一部分。控制字节是 `001SSVVV` 的形式。
+
+| size 取值 | 指针计算方法                             | 指针比特位数 | 寻址范围 |
+| ------- | ---------------------------------- | ------ | ---- |
+| 0       | 控制字节的后1个字节加上控制字节中的3个比特位组成的11位数据    | 11     |      |
+| 1       | 控制字节的后2个字节加上控制字节中的3个比特位组成的19位数据    | 19     |      |
+| 2       | 控制字节的后3个字节加上控制字节中的3个比特位组成的27位数据    | 27     |      |
+| 3       | 控制字节的后4个字节组成的32位数据(控制字节中的3个比特位被忽略) | 32     | 4GB  |
 
 If the size is 0, the pointer is built by appending the next byte to the last three bits to produce an 11-bit value.
 
@@ -268,9 +302,7 @@ If the size is 1, the pointer is built by appending the next two bytes to the la
 
 If the size is 2, the pointer is built by appending the next three bytes to the last three bits to produce a 27-bit value + 526336.
 
-Finally, if the size is 3, the pointer’s value is contained in the next four bytes as a 32-bit value. In this case, the last three bits of the control byte are ignored.
-
-This means that we are limited to 4GB of address space for pointers, so the data section size for the database is limited to 4GB.
+由上面可以看出，指针的寻址范围为 4GB，所以数据段不能超过 4GB.
 
 ### UTF-8 string - 2
 
@@ -283,8 +315,6 @@ This is stored as an IEEE-754 double (binary64) in big-endian format. The length
 ### bytes - 4
 
 一个不确定长度的字节序列可以包含任何二进制数据。如果长度为0，说明是一个空的字节序列。这个类型当前还未使用，以后可能会用于嵌入非文本数据，例如图像等。
-
-
 
 ### integer formats
 
