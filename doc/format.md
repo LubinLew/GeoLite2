@@ -279,42 +279,107 @@ if (type == MMDB_DATA_TYPE_EXTENDED) {
 
 解析过程在函数 `decode_one()` 中实现。
 
-```c
-int decode_one(const MMDB_s *const mmdb, uint32_t offset, MMDB_entry_data_s *entry_data)
-```
-
 ### 指针类型(pointer)
 
 指针,指向数据段的地址空间。这个指针会指向一个数据域的开始。不能够将一个指针指向另一个指针。指针值是从数据段开始计算，而不是从文件开始。
 
 指针的值使用控制字节的后五个比特位计算。需要将这五个比特位分成两部分。前两个比特位表示大小(size)，后三个比特位是值(value)的一部分。控制字节是 `001SSVVV` 的形式。
 
-| size 取值 | 指针计算方法                             | 指针比特位数 | 寻址范围 |
-| ------- | ---------------------------------- | ------ | ---- |
-| 0       | 控制字节的后1个字节加上控制字节中的3个比特位组成的11位数据    | 11     |      |
-| 1       | 控制字节的后2个字节加上控制字节中的3个比特位组成的19位数据    | 19     |      |
-| 2       | 控制字节的后3个字节加上控制字节中的3个比特位组成的27位数据    | 27     |      |
-| 3       | 控制字节的后4个字节组成的32位数据(控制字节中的3个比特位被忽略) | 32     | 4GB  |
-
-If the size is 0, the pointer is built by appending the next byte to the last three bits to produce an 11-bit value.
-
-If the size is 1, the pointer is built by appending the next two bytes to the last three bits to produce a 19-bit value + 2048.
-
-If the size is 2, the pointer is built by appending the next three bytes to the last three bits to produce a 27-bit value + 526336.
+| size 取值 | 指针计算方法                                   | 指针比特位数 | 寻址范围      |
+| ------- | ---------------------------------------- | ------ | --------- |
+| 0       | 控制字节的后1个字节加上控制字节中的3个比特位组成的11位数据          | 11     | 2047      |
+| 1       | 控制字节的后2个字节加上控制字节中的3个比特位组成的19位数据 + 2048   | 19     | 526335    |
+| 2       | 控制字节的后3个字节加上控制字节中的3个比特位组成的27位数据 + 526336 | 27     | 134744063 |
+| 3       | 控制字节的后4个字节组成的32位数据(控制字节中的3个比特位被忽略)       | 32     | 4GB       |
 
 由上面可以看出，指针的寻址范围为 4GB，所以数据段不能超过 4GB.
 
-### UTF-8 string - 2
+```c
+/* 指针类型计算 */
+if (type == MMDB_DATA_TYPE_POINTER) {
+    uint8_t psize = ((ctrl >> 3) & 3) + 1; //注意这里给size加1了
+    entry_data->pointer = get_ptr_from(ctrl, &mem[offset], psize);
+}
 
-一个不确定长度的字节序列其中含有争取到的UTF8内容，如果产地为0，表示是一个空字符串。
+/* 获取指针的值 */
+uint32_t get_ptr_from(uint8_t ctrl, uint8_t const *const ptr, int ptr_size)
+{
+    uint32_t new_offset;
+    switch (ptr_size) {
+    case 1: //size 为 0 的情况
+        new_offset = ( (ctrl & 7) << 8) + ptr[0];
+        break;
+    case 2://size 为 1 的情况
+        new_offset = 2048 + ( (ctrl & 7) << 16 ) + ( ptr[0] << 8) + ptr[1];
+        break;
+    case 3://size 为 2 的情况
+        new_offset = 2048 + 524288 + ( (ctrl & 7) << 24 ) + get_uint24(ptr);
+        break;
+    case 4: //size 为 3 的情况
+    default:
+        new_offset = get_uint32(ptr);
+        break;
+    }
+    return new_offset;
+}
 
-### double - 3
 
-This is stored as an IEEE-754 double (binary64) in big-endian format. The length of a double is always 8 bytes.
+```
 
-### bytes - 4
 
-一个不确定长度的字节序列可以包含任何二进制数据。如果长度为0，说明是一个空的字节序列。这个类型当前还未使用，以后可能会用于嵌入非文本数据，例如图像等。
+
+### 字符串类型(string)
+
+一个不定长的字节序列其中含有UTF8的内容，如果长度为0，表示是一个空字符串。
+
+```c
+if (type == MMDB_DATA_TYPE_UTF8_STRING) {
+    entry_data->utf8_string = size == 0 ? "" : (char *)&mem[offset];
+    entry_data->data_size = size;
+}
+```
+
+### 双精度浮点类型(double)
+
+This is stored as an IEEE-754 double (binary64) . double 类型永远都是8个字节，以大端形式存储。
+
+```c
+if (type == MMDB_DATA_TYPE_DOUBLE) {
+    size = 8;
+    entry_data->double_value = get_ieee754_double(&mem[offset]);
+}
+
+/* 还原 double 类型 */
+double get_ieee754_double(const uint8_t *restrict p)
+{
+    volatile double d;
+    uint8_t *q = (void *)&d;
+#if MMDB_LITTLE_ENDIAN || _WIN32
+    q[7] = p[0];
+    q[6] = p[1];
+    q[5] = p[2];
+    q[4] = p[3];
+    q[3] = p[4];
+    q[2] = p[5];
+    q[1] = p[6];
+    q[0] = p[7];
+#else
+    memcpy(q, p, 8);
+#endif
+    return d;
+}
+```
+
+### 字节类型(bytes)
+
+一个不确定长度的字节序列可以包含任何二进制数据。如果长度为0，说明是一个空的字节序列。<u>这个类型当前还未使用</u>，以后可能会用于嵌入非文本数据，例如图像等。
+
+```c
+if (type == MMDB_DATA_TYPE_BYTES) {
+    entry_data->bytes = &mem[offset];
+    entry_data->data_size = size;
+}
+```
 
 ### integer formats
 
