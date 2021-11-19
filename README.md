@@ -10,7 +10,7 @@
 
 **API 接口文档**
 
-[LINK](mmdb_writer_API.md)
+[LINK](docs/mmdb_writer_API.md)
 
 ## See Also
 
