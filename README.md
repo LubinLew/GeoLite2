@@ -1,13 +1,13 @@
 # GeoLite2
 
 **mmdb文件格式说明**
-[LINK](docs/format.md)
+[LINK](docs/mmdb_format_spec.md)
 
 **自己制作mmdb文件**
-[LINK](docs/mmdb_writer.md)
+[LINK](docs/make_mmdb.md)
 
 **API 接口文档**
-[LINK](docs/API.md)
+[LINK](mmdb_writer_API.md)
 
 ## See Also
 
