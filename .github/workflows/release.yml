@@ -31,14 +31,14 @@ jobs:
             echo "WORKDIR=GeoLite2-City-CSV_${VERSION}"   >> $GITHUB_ENV
             curl -Lsk $URI -o GeoLite2-City-CSV_$VERSION.zip
             unzip GeoLite2-City-CSV_$VERSION.zip
+            cp release/rebuild.sh ${{env.WORKDIR}}/
+            cp release/rebuild.pl ${{env.WORKDIR}}/
           else
             echo "GOON=false"         >> $GITHUB_ENV
           fi
 
-      - name: Download Maxmind GeoLite2
+      - name: Rebuild Maxmind GeoLite2
         run: |
-          cp release/rebuild.sh ${{env.WORKDIR}}
-          cp release/rebuild.pl ${{env.WORKDIR}}
           docker run --rm -it -v ${{env.WORKDIR}}:/geoip -w /geoip centos:7 /geoip/rebuild.sh
           mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
@@ -56,11 +56,11 @@ jobs:
           tag: ${{env.VERSION}}
           message: "GeoLite2 ${{env.VERSION}}"
 
-      - name: Release Note
+      - name: Create Release Note
         run: |
           echo -e "# GeoLite2-City-IPv4-CN-${{env.VERSION}}\n\n" > releaseNote.md
-          echo -e "GeoLite2 Filename: ${{env.FILENAME}}\n"      >> releaseNote.md
-          echo -e "GeoLite2 Md5sum  : ${{env.MD5SUM}}\n"        >> releaseNote.md
+          echo -e "GeoLite2 Filename: ${{env.FILENAME}}\n\n"    >> releaseNote.md
+          echo -e "GeoLite2 Md5sum  : ${{env.MD5SUM}}\n\n"      >> releaseNote.md
 
       - name: Create Release
         uses: ncipollo/release-action@v1
