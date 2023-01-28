@@ -1,0 +1,82 @@
+name: release
+
+on:
+  schedule:
+    - cron: '0 0 */1 * *'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Check Maxmind GeoLite2 Version
+        run: |
+          URI="https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City-CSV&license_key=${{secrets.GEOLITE2_KEY}}&suffix=zip"
+          curl -Isk $URI > /tmp/curl.txt
+          FILENAME=`cat /tmp/curl.txt | grep -i 'content-disposition: attachment; filename='|awk -F'=' '{print $2}'`
+          MD5SUM=`cat /tmp/curl.txt | grep -i 'etag: "'|awk -F'"' '{print $2}'`
+          VERSION=`echo $FILENAME | awk -F'_' '{print $NF}' | sed 's#.zip##'`
+          TAG=`curl -Isk 'https://github.com/LubinLew/GeoLite2/releases/latest' | grep -i "location: " | sed 's#https://github.com/LubinLew/GeoLite2/releases/tag/##'`
+          if [ "${TAG}" != ${VERSION} ] ; then
+            echo "GOON=true"          >> $GITHUB_ENV
+            echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+            echo "MD5SUM=$MD5SUM"     >> $GITHUB_ENV
+            echo "VERSION=$VERSION"   >> $GITHUB_ENV
+            curl -Lsk $URI -o GeoLite2-City-CSV_$VERSION.zip
+            unzip GeoLite2-City-CSV_$VERSION.zip
+          else
+            echo "GOON=false"         >> $GITHUB_ENV
+          fi
+
+      - name: Download Maxmind GeoLite2
+        run: |
+          WORKDIR="GeoLite2-City-CSV_${{env.VERSION}}"
+          cp release/rebuild.sh ${WORKDIR}
+          cp release/rebuild.pl ${WORKDIR}
+          docker run --rm -it -v ${WORKDIR}:/geoip -w /geoip centos:7 /geoip/rebuild.sh
+          mv ${WORKDIR}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
+          git config --global user.name  "LubinLew"
+          git config --global user.email "lgbxyz@gmail.com"
+          echo "$VERSION"    >  version.txt
+          echo "MD5:$MD5SUM" >> version.txt
+          git add version.txt
+          git commit -m "GeoLite2 $VERSION"
+          git push
+
+      - name: Create Tag
+        uses: rickstaa/action-create-tag@v1
+        if: env.GOON == 'true'
+        with:
+          tag: ${{env.VERSION}}
+          message: "GeoLite2 ${{env.VERSION}}"
+
+      - name: Release Note
+        run: |
+          echo -e "# GeoLite2-City-IPv4-CN-${{env.VERSION}}\n\n" > releaseNote.md
+          echo -e "GeoLite2 Filename: ${{env.FILENAME}}\n"      >> releaseNote.md
+          echo -e "GeoLite2 Md5sum  : ${{env.MD5SUM}}\n"        >> releaseNote.md
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        if: env.GOON == 'true'
+        with:
+          tag: ${{env.VERSION}}
+          name: "GeoLite2-City-IPv4-CN-${{env.VERSION}}"
+          artifacts: "*.mmdb"
+          bodyFile: "releaseNote.md"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Files
+        uses: xresloader/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: env.GOON == 'true'
+        with:
+          file: "*.mmdb"
+          tags: ${{env.VERSION}}
