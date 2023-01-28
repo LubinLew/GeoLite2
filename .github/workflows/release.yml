@@ -28,7 +28,7 @@ jobs:
             echo "FILENAME=$FILENAME" >> $GITHUB_ENV
             echo "MD5SUM=$MD5SUM"     >> $GITHUB_ENV
             echo "VERSION=$VERSION"   >> $GITHUB_ENV
-            echo "WORKDIR="GeoLite2-City-CSV_${VERSION}"   >> $GITHUB_ENV
+            echo "WORKDIR=GeoLite2-City-CSV_${VERSION}"   >> $GITHUB_ENV
             curl -Lsk $URI -o GeoLite2-City-CSV_$VERSION.zip
             unzip GeoLite2-City-CSV_$VERSION.zip
           else
@@ -37,10 +37,10 @@ jobs:
 
       - name: Download Maxmind GeoLite2
         run: |
-          cp release/rebuild.sh ${WORKDIR}
-          cp release/rebuild.pl ${WORKDIR}
-          docker run --rm -it -v ${WORKDIR}:/geoip -w /geoip centos:7 /geoip/rebuild.sh
-          mv ${WORKDIR}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
+          cp release/rebuild.sh ${{env.WORKDIR}}
+          cp release/rebuild.pl ${{env.WORKDIR}}
+          docker run --rm -it -v ${{env.WORKDIR}}:/geoip -w /geoip centos:7 /geoip/rebuild.sh
+          mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
           git config --global user.email "lgbxyz@gmail.com"
           echo "$VERSION"    >  version.txt
