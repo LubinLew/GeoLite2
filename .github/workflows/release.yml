@@ -19,15 +19,16 @@ jobs:
         run: |
           URI="https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City-CSV&license_key=${{secrets.GEOLITE2_KEY}}&suffix=zip"
           curl -Isk $URI > /tmp/curl.txt
-          FILENAME=`cat /tmp/curl.txt | grep -i 'content-disposition: attachment; filename='|awk -F'=' '{print $2}'`
+          FILENAME=`cat /tmp/curl.txt | grep -i 'content-disposition: attachment; filename='|awk -F'=' '{print $2}' | tr -d '\n' | tr -d '\r'`
           MD5SUM=`cat /tmp/curl.txt | grep -i 'etag: "'|awk -F'"' '{print $2}'`
-          VERSION=`echo $FILENAME | awk -F'_' '{print $NF}' | sed 's#.zip##' | tr -d '\n'`
+          VERSION=`echo $FILENAME | awk -F'_' '{print $NF}' | sed 's#.zip##'`
           TAG=`curl -Isk 'https://github.com/LubinLew/GeoLite2/releases/latest' | grep -i "location: " | sed 's#https://github.com/LubinLew/GeoLite2/releases/tag/##'`
           if [ "${TAG}" != ${VERSION} ] ; then
             echo "GOON=true"          >> $GITHUB_ENV
             echo "FILENAME=$FILENAME" >> $GITHUB_ENV
             echo "MD5SUM=$MD5SUM"     >> $GITHUB_ENV
             echo "VERSION=$VERSION"   >> $GITHUB_ENV
+            echo "WORKDIR="GeoLite2-City-CSV_${VERSION}"   >> $GITHUB_ENV
             curl -Lsk $URI -o GeoLite2-City-CSV_$VERSION.zip
             unzip GeoLite2-City-CSV_$VERSION.zip
           else
@@ -36,7 +37,6 @@ jobs:
 
       - name: Download Maxmind GeoLite2
         run: |
-          WORKDIR="GeoLite2-City-CSV_${{env.VERSION}}"
           cp release/rebuild.sh ${WORKDIR}
           cp release/rebuild.pl ${WORKDIR}
           docker run --rm -it -v ${WORKDIR}:/geoip -w /geoip centos:7 /geoip/rebuild.sh
