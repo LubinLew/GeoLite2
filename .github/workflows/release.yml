@@ -29,10 +29,10 @@ jobs:
             echo "MD5SUM=$MD5SUM"     >> $GITHUB_ENV
             echo "VERSION=$VERSION"   >> $GITHUB_ENV
             echo "WORKDIR=GeoLite2-City-CSV_${VERSION}"   >> $GITHUB_ENV
-            curl -Lsk $URI -o GeoLite2-City-CSV_$VERSION.zip
-            unzip GeoLite2-City-CSV_$VERSION.zip
-            cp release/rebuild.sh ${{env.WORKDIR}}/
-            cp release/rebuild.pl ${{env.WORKDIR}}/
+            curl -Lsk $URI -o GeoLite2-City-CSV_${VERSION}.zip
+            unzip GeoLite2-City-CSV_${VERSION}.zip
+            cp release/rebuild.sh GeoLite2-City-CSV_${VERSION}/
+            cp release/rebuild.pl GeoLite2-City-CSV_${VERSION}/
           else
             echo "GOON=false"         >> $GITHUB_ENV
           fi
