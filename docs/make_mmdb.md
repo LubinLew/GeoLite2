@@ -442,10 +442,10 @@ while (my $line = <$cn_data>) {
                     $locationdb{$fields[0]}{subdivision_1_name} = $fields[7];
                 }
                 if ($fields[9]) {
-                    $locationdb{$fields[0]}{subdivision_1_name} = $fields[9];
+                    $locationdb{$fields[0]}{subdivision_2_name} = $fields[9];
                 }
                 if ($fields[10]) {
-                    $locationdb{$fields[0]}{subdivision_1_name} = $fields[10];
+                    $locationdb{$fields[0]}{city_name} = $fields[10];
                 }
             } else {
                 warn "no match line: $line\n"
