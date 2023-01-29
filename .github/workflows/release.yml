@@ -39,7 +39,7 @@ jobs:
 
       - name: Rebuild Maxmind GeoLite2
         run: |
-          ${{env.WORKDIR}}/rebuild.sh
+          sudo ${{env.WORKDIR}}/rebuild.sh
           mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
           git config --global user.email "lgbxyz@gmail.com"

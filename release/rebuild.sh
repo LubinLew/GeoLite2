@@ -4,7 +4,7 @@ set -e
 #####################################################
 
 if which dpkg &> /dev/null; then
-  INSTALLER="apt"
+  INSTALLER="apt-get"
 else
   INSTALLER="yum"
 fi
