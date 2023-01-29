@@ -31,16 +31,15 @@ jobs:
             echo "WORKDIR=`pwd`/GeoLite2-City-CSV_${VERSION}"   >> $GITHUB_ENV
             curl -Lsk $URI -o GeoLite2-City-CSV_${VERSION}.zip
             unzip GeoLite2-City-CSV_${VERSION}.zip
-            cp release/rebuild.sh GeoLite2-City-CSV_${VERSION}/
             cp release/rebuild.pl GeoLite2-City-CSV_${VERSION}/
+            cp release/rebuild.sh GeoLite2-City-CSV_${VERSION}/
           else
             echo "GOON=false"         >> $GITHUB_ENV
           fi
 
       - name: Rebuild Maxmind GeoLite2
         run: |
-          docker pull centos:7
-          docker run -it -v ${{env.WORKDIR}}:/geoip -w /geoip centos:7 /geoip/rebuild.sh
+          ${{env.WORKDIR}}/rebuild.sh
           mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
           git config --global user.email "lgbxyz@gmail.com"
