@@ -29,9 +29,9 @@ cpanm Text::CSV
 另外可以安装 mmdblookup 工具用来做测试
 
 ```bash
-wget https://github.com/maxmind/libmaxminddb/releases/download/1.6.0/libmaxminddb-1.6.0.tar.gz
-tar xf libmaxminddb-1.6.0.tar.gz
-cd libmaxminddb-1.6.0
+wget https://github.com/maxmind/libmaxminddb/releases/download/1.7.1/libmaxminddb-1.7.1.tar.gz
+tar xf libmaxminddb-1.7.1.tar.gz
+cd libmaxminddb-1.7.1
 ./configure
 make
 make install
@@ -306,7 +306,7 @@ mmdb-dump-metadata 可以查看基本信息
 
 ```perl
 #!/usr/bin/perl
-use JSON;
+#use JSON;
 use utf8;
 use Text::CSV;
 use MaxMind::DB::Writer::Tree;
