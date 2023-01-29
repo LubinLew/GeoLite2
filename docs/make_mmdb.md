@@ -315,7 +315,7 @@ use open qw(:std :encoding(UTF-8));
 
 # 声明数据结构中的数据类型
 my %types = (
-    contry       => 'map',
+    country      => 'map',
     city         => 'map',
     names        => 'map',
     'zh-CN'      => 'utf8_string',
@@ -339,7 +339,7 @@ sub insert_cidr_and_info {
 
     my %geoinfo;
 
-    $geoinfo{contry} = {
+    $geoinfo{country} = {
         names => {
             'zh-CN' => $_[1]{country_name}
         }
