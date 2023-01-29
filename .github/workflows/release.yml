@@ -32,14 +32,14 @@ jobs:
             curl -Lsk $URI -o GeoLite2-City-CSV_${VERSION}.zip
             unzip GeoLite2-City-CSV_${VERSION}.zip
             cp release/rebuild.pl GeoLite2-City-CSV_${VERSION}/
-            cp release/rebuild.sh GeoLite2-City-CSV_${VERSION}/
           else
             echo "GOON=false"         >> $GITHUB_ENV
           fi
 
       - name: Rebuild Maxmind GeoLite2
         run: |
-          sudo ${{env.WORKDIR}}/rebuild.sh
+          docker pull lubinlew/geolite2rebuild:latest
+          docker run -it -v ${{env.WORKDIR}}:/geoip -w /geoip lubinlew/geolite2rebuild:latest /geoip/rebuild.pl
           mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
           git config --global user.email "lgbxyz@gmail.com"
