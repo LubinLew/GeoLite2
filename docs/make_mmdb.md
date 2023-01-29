@@ -19,6 +19,10 @@ mmdb 的制作需要使用官方工具 [MaxMind-DB-Writer-perl](https://github.c
 执行下面的命令进行安装，时间可能较长，会自动下载各种依赖包
 
 ```bash
+# 安装编译工具(perl模块安装时需要gcc编译)
+yum install -y perl  perl-devel 
+yum groupinstall -y 'Development Tools'
+
 yum install -y cpanminus
 cpanm MaxMind::DB::Writer
 
