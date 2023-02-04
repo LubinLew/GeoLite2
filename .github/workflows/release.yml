@@ -38,8 +38,8 @@ jobs:
 
       - name: Rebuild Maxmind GeoLite2
         run: |
-          docker pull lubinlew/geolite2rebuild:latest
-          docker run -t -v ${{env.WORKDIR}}:/geoip -w /geoip lubinlew/geolite2rebuild:latest /geoip/rebuild.pl 2>&1  | tee -a rebuild.log
+          bash release/Docker/build.sh > /dev/null
+          docker run -t -v ${{env.WORKDIR}}:/geoip -w /geoip lubinlew/geolite2rebuild:latest /geoip/rebuild.pl
           mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
           git config --global user.email "lgbxyz@gmail.com"
@@ -57,6 +57,7 @@ jobs:
           message: "GeoLite2 ${{env.VERSION}}"
 
       - name: Create Release Note
+        if: env.GOON == 'true'
         run: |
           echo -e "# GeoLite2-City-IPv4-CN-${{env.VERSION}}\n\n" > releaseNote.md
           echo -e "GeoLite2 Filename: ${{env.FILENAME}}\n\n"    >> releaseNote.md
