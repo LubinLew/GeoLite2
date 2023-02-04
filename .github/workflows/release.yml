@@ -67,7 +67,7 @@ jobs:
         if: env.GOON == 'true'
         with:
           tag: ${{env.VERSION}}
-          name: "GeoLite2-City-IPv4-CN-${{env.VERSION}}"
+          name: "${{env.VERSION}}"
           artifacts: "*.mmdb"
           bodyFile: "releaseNote.md"
           token: ${{ secrets.GITHUB_TOKEN }}
