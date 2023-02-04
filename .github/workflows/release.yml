@@ -39,7 +39,7 @@ jobs:
       - name: Rebuild Maxmind GeoLite2
         run: |
           docker pull lubinlew/geolite2rebuild:latest
-          docker run -it -v ${{env.WORKDIR}}:/geoip -w /geoip lubinlew/geolite2rebuild:latest /geoip/rebuild.pl 2>&1  | tee -a rebuild.log
+          docker run -t -v ${{env.WORKDIR}}:/geoip -w /geoip lubinlew/geolite2rebuild:latest /geoip/rebuild.pl 2>&1  | tee -a rebuild.log
           mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
           git config --global user.email "lgbxyz@gmail.com"
