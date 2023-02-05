@@ -20,9 +20,13 @@ jobs:
           URI="https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City-CSV&license_key=${{secrets.GEOLITE2_KEY}}&suffix=zip"
           curl -Isk $URI > /tmp/curl.txt
           FILENAME=`cat /tmp/curl.txt | grep -i 'content-disposition: attachment; filename='|awk -F'=' '{print $2}' | tr -d '\n' | tr -d '\r'`
+          echo "FileName: ${FILENAME}"
           MD5SUM=`cat /tmp/curl.txt | grep -i 'etag: "'|awk -F'"' '{print $2}'`
+          echo "FileMd5: ${MD5SUM}"
           VERSION=`echo $FILENAME | awk -F'_' '{print $NF}' | sed 's#.zip##'`
+          echo "FileVersion: ${VERSION}"
           TAG=`curl -Isk 'https://github.com/LubinLew/GeoLite2/releases/latest' | grep -i "location: " | sed "s#location: https://github.com/LubinLew/GeoLite2/releases/tag/##i" | tr -d '\n' | tr -d '\r'`
+          echo "Latest Tag: ${TAG}"
           if [ "${TAG}" != ${VERSION} ] ; then
             echo "GOON=true"          >> $GITHUB_ENV
             echo "FILENAME=$FILENAME" >> $GITHUB_ENV
@@ -34,6 +38,7 @@ jobs:
             cp release/rebuild.pl GeoLite2-City-CSV_${VERSION}/
           else
             echo "GOON=false"         >> $GITHUB_ENV
+            echo "Already Up to Date"
           fi
 
       - name: Rebuild Maxmind GeoLite2
