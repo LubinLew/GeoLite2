@@ -42,6 +42,7 @@ jobs:
           fi
 
       - name: Rebuild Maxmind GeoLite2
+        if: env.GOON == 'true'
         run: |
           bash release/Docker/build.sh
           docker run -t -v ${{env.WORKDIR}}:/geoip -w /geoip lubinlew/geolite2rebuild:latest /geoip/rebuild.pl
