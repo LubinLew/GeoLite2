@@ -22,7 +22,7 @@ jobs:
           FILENAME=`cat /tmp/curl.txt | grep -i 'content-disposition: attachment; filename='|awk -F'=' '{print $2}' | tr -d '\n' | tr -d '\r'`
           MD5SUM=`cat /tmp/curl.txt | grep -i 'etag: "'|awk -F'"' '{print $2}'`
           VERSION=`echo $FILENAME | awk -F'_' '{print $NF}' | sed 's#.zip##'`
-          TAG=`curl -Isk 'https://github.com/LubinLew/GeoLite2/releases/latest' | grep -i "location: " | sed 's#https://github.com/LubinLew/GeoLite2/releases/tag/##'`
+          TAG=`curl -Isk 'https://github.com/LubinLew/GeoLite2/releases/latest' | grep -i "location: " | sed "s#location: https://github.com/LubinLew/GeoLite2/releases/tag/##i" | tr -d '\n' | tr -d '\r'``
           if [ "${TAG}" != ${VERSION} ] ; then
             echo "GOON=true"          >> $GITHUB_ENV
             echo "FILENAME=$FILENAME" >> $GITHUB_ENV
@@ -38,7 +38,7 @@ jobs:
 
       - name: Rebuild Maxmind GeoLite2
         run: |
-          bash release/Docker/build.sh > /dev/null
+          bash release/Docker/build.sh
           docker run -t -v ${{env.WORKDIR}}:/geoip -w /geoip lubinlew/geolite2rebuild:latest /geoip/rebuild.pl
           mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
