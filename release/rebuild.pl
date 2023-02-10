@@ -11,9 +11,16 @@ my %types = (
     country       => 'map',
     city         => 'map',
     names        => 'map',
+    continent    => 'map',
+    location     => 'map',
+    latitude     => 'double',
+    longitude    => 'double',
+    time_zone    => 'utf8_string',
     'zh-CN'      => 'utf8_string',
+    'en'         => 'utf8_string',
     subdivisions => ['array', 'map'],
 );
+
 
 # 创建树
 my $tree = MaxMind::DB::Writer::Tree->new(
@@ -32,37 +39,73 @@ sub insert_cidr_and_info {
 
     my %geoinfo;
 
-    $geoinfo{country} = {
-        names => {
-            'zh-CN' => $_[1]{country_name}
+    if ($_[1]{country_name}) {
+        $geoinfo{country} = {
+            names => {
+               'en' => $_[1]{country_name}
+            }
         }
-    };
+    } else {
+        $geoinfo{country} = {
+            names => {
+               'en' => '*'
+            }
+        }
+    }
 
     if ( $_[1]{subdivision_1_name} ) {
-        if ($_[1]{subdivision_2_name}) {
-            $geoinfo{subdivisions} = [ {
-                names => {
-                    'zh-CN' => $_[1]{subdivision_1_name}
-                }
-            }, {
-                names => {
-                    'zh-CN' =>  $_[1]{subdivision_2_name}
-                }
-            }]
-        } else {
-            $geoinfo{subdivisions} = [ {
-                names => {
-                    'zh-CN' => $_[1]{subdivision_1_name}
-                }
-            }]
-        }
+        $geoinfo{subdivisions} = [ {
+            names => {
+               'en' => $_[1]{subdivision_1_name}
+            }
+        }]
+    } else {
+        $geoinfo{subdivisions} = [ {
+            names => {
+               'en' => '*'
+            }
+        }]
     }
 
     if ($_[1]{city_name}) {
         $geoinfo{city} = {
             names => {
-                'zh-CN' => $_[1]{city_name}
+                'en' => $_[1]{city_name}
             }
+        }
+    } else {
+        $geoinfo{city} = {
+            names => {
+                'en' => '*'
+            }
+        }
+    }
+
+    if ($_[1]{continent_name}) {
+        $geoinfo{continent} = {
+            names => {
+                'en' => $_[1]{continent_name}
+            }
+        }
+    } else {
+        $geoinfo{continent} = {
+            names => {
+                'en' => '*'
+            }
+        }
+    }
+
+    if ($_[1]{time_zone}) {
+        $geoinfo{location} = {
+            'time_zone' => $_[1]{time_zone},
+            latitude => $_[2],
+            longitude => $_[3],
+        }
+    }else{
+        $geoinfo{location} = {
+            'time_zone' => '*',
+            latitude => 0.000000,
+            longitude => 0.000000,
         }
     }
 
@@ -73,11 +116,9 @@ sub insert_cidr_and_info {
 }
 
 # 插入保留地址
-insert_cidr_and_info('10.0.0.0/8',     {country_name => "局域网", subdivision_1_name => "局域网", subdivision_2_name => "局域网", city_name => "局域网"});
-insert_cidr_and_info('172.16.0.0/12',  {country_name => "局域网", subdivision_1_name => "局域网", subdivision_2_name => "局域网", city_name => "局域网"});
-insert_cidr_and_info('192.168.0.0/16', {country_name => "局域网", subdivision_1_name => "局域网", subdivision_2_name => "局域网", city_name => "局域网"});
-
-
+insert_cidr_and_info('10.0.0.0/8',     {continent_name => "*", country_name => "局域网", subdivision_1_name => "局域网", city_name => "局域网"});
+insert_cidr_and_info('172.16.0.0/12',  {continent_name => "*", country_name => "局域网", subdivision_1_name => "局域网", city_name => "局域网"});
+insert_cidr_and_info('192.168.0.0/16', {continent_name => "*", country_name => "局域网", subdivision_1_name => "局域网", city_name => "局域网"});
 
 my $csv = Text::CSV->new ({
     binary                => 1,
@@ -105,10 +146,12 @@ while (my $line = <$en_data>) {
         if ($csv->parse($line)) {
             my @fields = $csv->fields();
             $locationdb{$fields[0]} = {
+                continent_name     => $fields[3] ,#? $fields[3] : 'N/A',
                 country_name       => $fields[5] ,#? $fields[5] : 'N/A',
                 subdivision_1_name => $fields[7] ,#? $fields[7] : 'N/A',
                 subdivision_2_name => $fields[9] ,#? $fields[9] : 'N/A',
                 city_name          => $fields[10],# ? $fields[10] : 'N/A'
+                time_zone          => $fields[12], # ? $fields[10] : 'N/A',
             }
         } else {
             warn "Line could not be parsed: $line\n";
@@ -128,6 +171,9 @@ while (my $line = <$cn_data>) {
         if ($csv->parse($line)) {
             my @fields = $csv->fields();
             if ($locationdb{$fields[0]}) {
+                if ($fields[3]) {
+                    $locationdb{$fields[0]}{continent_name} = $fields[3];
+                }
                 if ($fields[5]) {
                     $locationdb{$fields[0]}{country_name} = $fields[5];
                 }
@@ -167,7 +213,14 @@ while (my $line = <$ipv4_data>) {
                 $key = $fields[2]
             }
             if ($locationdb{$key}) {
-                insert_cidr_and_info($fields[0], $locationdb{$key});
+                if (length $fields[7] == 0){
+                    $fields[7] = 0.00000
+                }
+                if (length $fields[8] == 0){
+                    $fields[8] = 0.00000
+                }
+
+                insert_cidr_and_info($fields[0], $locationdb{$key}, $fields[7], $fields[8]);
             } else {
                 warn "$fields[0] no match\n";
             }
