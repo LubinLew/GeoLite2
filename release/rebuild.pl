@@ -119,6 +119,7 @@ sub insert_cidr_and_info {
 insert_cidr_and_info('10.0.0.0/8',     {continent_name => "*", country_name => "局域网", subdivision_1_name => "局域网", city_name => "局域网"});
 insert_cidr_and_info('172.16.0.0/12',  {continent_name => "*", country_name => "局域网", subdivision_1_name => "局域网", city_name => "局域网"});
 insert_cidr_and_info('192.168.0.0/16', {continent_name => "*", country_name => "局域网", subdivision_1_name => "局域网", city_name => "局域网"});
+insert_cidr_and_info('127.0.0.1/8',    {continent_name => "*", country_name => "本机",   subdivision_1_name => "本机",   city_name => "本机"});
 
 my $csv = Text::CSV->new ({
     binary                => 1,
