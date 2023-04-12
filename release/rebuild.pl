@@ -45,24 +45,12 @@ sub insert_cidr_and_info {
                'en' => $_[1]{country_name}
             }
         }
-    } else {
-        $geoinfo{country} = {
-            names => {
-               'en' => '*'
-            }
-        }
     }
 
     if ( $_[1]{subdivision_1_name} ) {
         $geoinfo{subdivisions} = [ {
             names => {
                'en' => $_[1]{subdivision_1_name}
-            }
-        }]
-    } else {
-        $geoinfo{subdivisions} = [ {
-            names => {
-               'en' => '*'
             }
         }]
     }
@@ -73,24 +61,12 @@ sub insert_cidr_and_info {
                 'en' => $_[1]{city_name}
             }
         }
-    } else {
-        $geoinfo{city} = {
-            names => {
-                'en' => '*'
-            }
-        }
     }
 
     if ($_[1]{continent_name}) {
         $geoinfo{continent} = {
             names => {
                 'en' => $_[1]{continent_name}
-            }
-        }
-    } else {
-        $geoinfo{continent} = {
-            names => {
-                'en' => '*'
             }
         }
     }
@@ -100,12 +76,6 @@ sub insert_cidr_and_info {
             'time_zone' => $_[1]{time_zone},
             latitude => $_[2],
             longitude => $_[3],
-        }
-    }else{
-        $geoinfo{location} = {
-            'time_zone' => '*',
-            latitude => 0.000000,
-            longitude => 0.000000,
         }
     }
 
@@ -147,12 +117,12 @@ while (my $line = <$en_data>) {
         if ($csv->parse($line)) {
             my @fields = $csv->fields();
             $locationdb{$fields[0]} = {
-                continent_name     => $fields[3] ,#? $fields[3] : 'N/A',
-                country_name       => $fields[5] ,#? $fields[5] : 'N/A',
-                subdivision_1_name => $fields[7] ,#? $fields[7] : 'N/A',
-                subdivision_2_name => $fields[9] ,#? $fields[9] : 'N/A',
-                city_name          => $fields[10],# ? $fields[10] : 'N/A'
-                time_zone          => $fields[12], # ? $fields[10] : 'N/A',
+                continent_name     => $fields[3]  ? $fields[3] :  'N/A',
+                country_name       => $fields[5]  ? $fields[5] :  'N/A',
+                subdivision_1_name => $fields[7]  ? $fields[7] :  'N/A',
+                subdivision_2_name => $fields[9]  ? $fields[9] :  'N/A',
+                city_name          => $fields[10] ? $fields[10] : 'N/A',
+                time_zone          => $fields[12] ? $fields[10] : 'N/A',
             }
         } else {
             warn "Line could not be parsed: $line\n";
