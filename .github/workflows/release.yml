@@ -41,10 +41,14 @@ jobs:
             echo "Already Up to Date"
           fi
 
-      - name: Rebuild Maxmind GeoLite2
+      - name: Build Docker
         if: env.GOON == 'true'
         run: |
           bash release/Docker/build.sh
+
+      - name: Build City DB
+        if: env.GOON == 'true'
+        run: |
           docker run -t -v ${{env.WORKDIR}}:/geoip -w /geoip lubinlew/geolite2rebuild:latest /geoip/rebuild.pl
           mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
@@ -79,11 +83,3 @@ jobs:
           bodyFile: "releaseNote.md"
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Release Files
-        uses: xresloader/upload-to-github-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: env.GOON == 'true'
-        with:
-          file: "*.mmdb"
-          tags: ${{env.VERSION}}
