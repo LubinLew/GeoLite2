@@ -8,6 +8,7 @@
 
 - 只有中文
 - 只支持IPv4
+- 只有 country 和 city 信息
 - 支持常用[保留地址](https://en.wikipedia.org/wiki/Reserved_IP_addresses)(127.0.0.1/8等)
 
 并使用 [Github Action](.github/workflows/release.yml) 功能每天自动检查 [MaxMind](https://www.maxmind.com/) 官网更新，并自动发布最新版本。
