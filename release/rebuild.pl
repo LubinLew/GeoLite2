@@ -8,6 +8,9 @@ use open qw(:std :encoding(UTF-8));
 
 # 声明数据结构中的数据类型
 my %types = (
+    location     => 'map',
+    latitude     => 'double',
+    longitude    => 'double',
     country       => 'map',
     city         => 'map',
     names        => 'map',
@@ -29,6 +32,8 @@ my $tree = MaxMind::DB::Writer::Tree->new(
     remove_reserved_networks => 0
 );
 
+
+# 树的插入操作
 sub insert_cidr_and_info {
 
     my %geoinfo;
@@ -49,14 +54,19 @@ sub insert_cidr_and_info {
         }
     }
 
+    $geoinfo{location} = {
+        latitude  => $_[1]{latitude},
+        longitude => $_[1]{longitude},
+    };
+
     $tree->insert_network($_[0], {%geoinfo});
 }
 
 # 插入保留地址
-insert_cidr_and_info('10.0.0.0/8',     {continent_name => "*", country_name => "局域网", city_name => "局域网"});
-insert_cidr_and_info('172.16.0.0/12',  {continent_name => "*", country_name => "局域网", city_name => "局域网"});
-insert_cidr_and_info('192.168.0.0/16', {continent_name => "*", country_name => "局域网", city_name => "局域网"});
-insert_cidr_and_info('127.0.0.1/8',    {continent_name => "*", country_name => "本机",   city_name => "本机"});
+insert_cidr_and_info('10.0.0.0/8',     {country_name => "局域网", city_name => "局域网", latitude => 0.00000, longitude => 0.00000});
+insert_cidr_and_info('172.16.0.0/12',  {country_name => "局域网", city_name => "局域网", latitude => 0.00000, longitude => 0.00000});
+insert_cidr_and_info('192.168.0.0/16', {country_name => "局域网", city_name => "局域网", latitude => 0.00000, longitude => 0.00000});
+insert_cidr_and_info('127.0.0.1/8',    {country_name => "本机",   city_name => "本机",   latitude => 0.00000, longitude => 0.00000});
 
 my $csv = Text::CSV->new ({
     binary                => 1,
@@ -84,8 +94,10 @@ while (my $line = <$en_data>) {
         if ($csv->parse($line)) {
             my @fields = $csv->fields();
             $locationdb{$fields[0]} = {
-                country_name       => ($fields[5] ? $fields[5] : 'N/A'),
+                country_name       => ($fields[5]  ? $fields[5]  : 'N/A'),
                 city_name          => ($fields[10] ? $fields[10] : 'N/A'),
+                latitude           =>  0.00000,
+                longitude          =>  0.00000,
             }
         } else {
             warn "Line could not be parsed: $line\n";
@@ -112,7 +124,7 @@ while (my $line = <$cn_data>) {
                     $locationdb{$fields[0]}{city_name} = $fields[10];
                 }
             } else {
-                warn "no match line: $line\n"
+                warn "no match line: $line\n";
             }
         } else {
             warn "Line could not be parsed: $line\n";
@@ -121,7 +133,7 @@ while (my $line = <$cn_data>) {
 }
 print("$location_file_cn finished !\n");
 
-# 加载处理 Blocks-IPv4 文件
+# 加载处理 Blocks-IPv4 文件(经纬度信息在这里)
 $first = 1;
 open(my $ipv4_data, '<', $ipv4_block_file) or die "Could not open '$ipv4_block_file' $!\n";
 while (my $line = <$ipv4_data>) {
@@ -132,12 +144,26 @@ while (my $line = <$ipv4_data>) {
         if ($csv->parse($line)) {
             my @fields = $csv->fields();
             my $key;
+            my $latitude;
+            my $longitude;
             if ($fields[1]) {
-                $key = $fields[1]
+                $key = $fields[1];
             } else {
-                $key = $fields[2]
+                $key = $fields[2];
+            }
+            if ($fields[7]) {
+                $latitude = $fields[7];
+            } else {
+                $latitude = 0.00000;
+            }
+            if ($fields[8]) {
+                $longitude = $fields[8];
+            } else {
+                $longitude = 0.00000;
             }
             if ($locationdb{$key}) {
+                $locationdb{$key}{latitude}  = $latitude;
+                $locationdb{$key}{longitude} = $longitude;
                 insert_cidr_and_info($fields[0], $locationdb{$key});
             } else {
                 warn "$fields[0] no match\n";
