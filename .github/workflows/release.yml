@@ -52,15 +52,15 @@ jobs:
       - name: build docker
         if: env.GOON == 'true'
         run: |
-          if ! docker pull ghcr.io/lubinlew//geolite2_builder &> /dev/null; then
+          if ! docker pull ghcr.io/lubinlew//geolite2_builder:v1 &> /dev/null; then
             bash release/Docker/build.sh
-            docker push ghcr.io/lubinlew//geolite2_builder:latest
+            docker push ghcr.io/lubinlew//geolite2_builder:v1
           fi
 
       - name: Build City DB
         if: env.GOON == 'true'
         run: |
-          docker run -t -v ${{env.WORKDIR}}:/geoip -w /geoip ghcr.io/lubinlew/geolite2_builder:latest /geoip/rebuild.pl
+          docker run -t -v ${{env.WORKDIR}}:/geoip -w /geoip ghcr.io/lubinlew/geolite2_builder:v1 /geoip/rebuild.pl
           mv ${{env.WORKDIR}}/result.mmdb GeoLite2-City-IPv4-CN-${{env.VERSION}}.mmdb
           git config --global user.name  "LubinLew"
           git config --global user.email "lgbxyz@gmail.com"
