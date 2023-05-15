@@ -2,6 +2,8 @@
 set -e
 cd `dirname $0`
 ##########################################################
-IMAGE="lubinlew/geolite2rebuild:latest"
+IMAGE="ghcr.io/lubinlew/geolite2_builder:latest"
 
-docker build -t ${IMAGE} .
+if docker pull ${IMAGE} &> /dev/null ; then
+  docker build -t ${IMAGE} .
+fi
