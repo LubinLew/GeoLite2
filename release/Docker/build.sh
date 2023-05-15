@@ -3,7 +3,7 @@ set -ex
 cd `dirname $0`
 ##########################################################
 
-IMAGE="ghcr.io/lubinlew/geolite2_builder:latest"
+IMAGE="ghcr.io/lubinlew/geolite2_builder:v1"
 
 docker build -t ${IMAGE} .
 
