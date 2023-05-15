@@ -41,21 +41,10 @@ jobs:
             echo "Already Up to Date"
           fi
 
-      - name: login in docker
-        if: env.GOON == 'true'
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: build docker
         if: env.GOON == 'true'
         run: |
-          if ! docker pull ghcr.io/lubinlew//geolite2_builder:v1 &> /dev/null; then
             bash release/Docker/build.sh
-            docker push ghcr.io/lubinlew//geolite2_builder:v1
-          fi
 
       - name: Build City DB
         if: env.GOON == 'true'
